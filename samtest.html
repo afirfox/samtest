@@ -119,8 +119,7 @@ Roboto, Helvetica, Arial, sans-serif;
         // 检测是否为 HTTPS
         if (window.location.protocol !== 'https:' && 
 window.location.hostname !== 'localhost') {
-            statusMsg.innerText = "错误: 必须使用 HTTPS 协议才能调用摄像头！
-";
+            statusMsg.innerText = "错误: 必须使用 HTTPS 协议才能调用摄像头！";
             statusMsg.style.color = "red";
         } else {
             statusMsg.innerText = "请允许浏览器访问摄像头";
