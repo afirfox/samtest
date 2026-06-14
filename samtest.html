@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动端条码识别器</title>
+    <!-- 引入 html5-qrcode 库 -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", 
+Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 { color: #333; }
+
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            width: 100%;
+            max-width: 500px;
+            background: #e7f3ff;
+            border-left: 5px solid #2196F3;
+            word-break: break-all;
+            display: none; /* 初始隐藏 */
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* 按钮样式优化 */
+        button {
+            padding: 10px 20px;
+            background-color: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>条码/二维码扫描</h2>
+    
+    <!-- 扫描区域 -->
+    <div id="reader"></div>
+
+    <!-- 结果显示区域 -->
+    <div id="result">
+        <strong>识别结果:</strong> <span id="scanned-text"></span>
+    </div>
+
+    <div class="status" id="status-msg">等待摄像头权限...</div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+        const scannedTextSpan = document.getElementById('scanned-text');
+        const statusMsg = document.getElementById('status-msg');
+
+        // 成功回调函数
+        function onScanSuccess(decodedText, decodedResult) {
+            // 停止扫描（如果需要连续扫描，可以注释掉 stop()）
+            // html5QrcodeScanner.clear(); 
+
+            console.log(`Code matched = ${decodedText}`, decodedResult);
+            
+            // 显示结果
+            resultDiv.style.display = 'block';
+            scannedTextSpan.innerText = decodedText;
+            
+            // 震动反馈 (仅部分移动端支持)
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+
+            statusMsg.innerText = "扫描成功！";
+        }
+
+        // 失败回调函数（通常是寻找条码的过程中，不需要频繁显示）
+        function onScanFailure(error) {
+            // console.warn(`Code scan error = ${error}`);
+        }
+
+        // 初始化扫描器
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { 
+                fps: 10,           // 每秒帧数
+                qrbox: { width: 250, height: 150 }, // 扫描框大小 (条码通常
+是长方形)
+                aspectRatio: 1.0   // 宽高比
+            },
+            /* verbose= */ false
+        );
+
+        // 开始渲染
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+        // 检测是否为 HTTPS
+        if (window.location.protocol !== 'https:' && 
+window.location.hostname !== 'localhost') {
+            statusMsg.innerText = "错误: 必须使用 HTTPS 协议才能调用摄像头！
+";
+            statusMsg.style.color = "red";
+        } else {
+            statusMsg.innerText = "请允许浏览器访问摄像头";
+        }
+
+    </script>
+</body>
+</html>
