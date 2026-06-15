@@ -2,14 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>移动端条码识别器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>专业条码识别器</title>
     <!-- 引入 html5-qrcode 库 -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", 
-Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,15 +17,15 @@ Roboto, Helvetica, Arial, sans-serif;
             padding: 20px;
         }
 
-        h2 { color: #333; }
+        h2 { color: #333; margin-bottom: 10px; }
 
         #reader {
             width: 100%;
             max-width: 500px;
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
 
         #result {
@@ -37,24 +36,36 @@ Roboto, Helvetica, Arial, sans-serif;
             background: #e7f3ff;
             border-left: 5px solid #2196F3;
             word-break: break-all;
-            display: none; /* 初始隐藏 */
+            display: none;
+            box-sizing: border-box;
         }
 
         .status {
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 14px;
             color: #666;
+            text-align: center;
+            max-width: 500px;
         }
 
-        /* 按钮样式优化 */
+        .controls {
+            margin-bottom: 20px;
+        }
+
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background-color: #007AFF;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 16px;
-            margin-top: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:disabled {
+            background-color: #ccc;
         }
     </style>
 </head>
@@ -62,6 +73,11 @@ Roboto, Helvetica, Arial, sans-serif;
 
     <h2>条码/二维码扫描</h2>
     
+    <div class="controls">
+        <button id="start-btn">开启摄像头</button>
+        <button id="stop-btn" style="display:none; background-color:#FF3B30;">关闭</button>
+    </div>
+
     <!-- 扫描区域 -->
     <div id="reader"></div>
 
@@ -70,61 +86,87 @@ Roboto, Helvetica, Arial, sans-serif;
         <strong>识别结果:</strong> <span id="scanned-text"></span>
     </div>
 
-    <div class="status" id="status-msg">等待摄像头权限...</div>
+    <div class="status" id="status-msg">请点击按钮开启摄像头</div>
 
     <script>
         const resultDiv = document.getElementById('result');
         const scannedTextSpan = document.getElementById('scanned-text');
         const statusMsg = document.getElementById('status-msg');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
 
-        // 成功回调函数
+        // 创建 Html5Qrcode 实例 (底层 API)
+        const html5QrCode = new Html5Qrcode("reader");
+
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 180 }, // 适合条码的矩形框
+            aspectRatio: 1.0 
+        };
+
+        // 成功回调
         function onScanSuccess(decodedText, decodedResult) {
-            // 停止扫描（如果需要连续扫描，可以注释掉 stop()）
-            // html5QrcodeScanner.clear(); 
-
             console.log(`Code matched = ${decodedText}`, decodedResult);
-            
-            // 显示结果
             resultDiv.style.display = 'block';
             scannedTextSpan.innerText = decodedText;
             
-            // 震动反馈 (仅部分移动端支持)
-            if (navigator.vibrate) {
-                navigator.vibrate(200);
-            }
-
+            if (navigator.vibrate) navigator.vibrate(200);
             statusMsg.innerText = "扫描成功！";
+
+            // 如果你想扫到一个就停止，取消下面这行的注释
+            // stopCamera(); 
         }
 
-        // 失败回调函数（通常是寻找条码的过程中，不需要频繁显示）
-        function onScanFailure(error) {
-            // console.warn(`Code scan error = ${error}`);
+        async function startCamera() {
+            try {
+                statusMsg.innerText = "正在请求摄像头权限...";
+                startBtn.disabled = true;
+
+                // 核心修改：使用 facingMode: "environment" 强制调用后置摄像头
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    config, 
+                    onScanSuccess
+                );
+
+                statusMsg.innerText = "摄像头已就绪，请对准条码";
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+            } catch (err) {
+                console.error("Camera start error:", err);
+                statusMsg.style.color = "red";
+                if (err instanceof Html5Qrcode// 如果是库定义的错误
+                    || err.name === 'NotAllowedError') {
+                    statusMsg.innerText = "错误：权限被拒绝，请在浏览器设置中开启摄像头权限。";
+                } else if (location.protocol !== 'https:') {
+                    statusMsg.innerText = "错误：必须在 HTTPS 环境下才能使用摄像头！";
+                } else {
+                    statusMsg.innerText = `启动失败: ${err}`;
+                }
+                startBtn.disabled = false;
+            }
         }
 
-        // 初始化扫描器
-        let html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { 
-                fps: 10,           // 每秒帧数
-                qrbox: { width: 250, height: 150 }, // 扫描框大小 (条码通常
-是长方形)
-                aspectRatio: 1.0   // 宽高比
-            },
-            /* verbose= */ false
-        );
-
-        // 开始渲染
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-
-        // 检测是否为 HTTPS
-        if (window.location.protocol !== 'https:' && 
-window.location.hostname !== 'localhost') {
-            statusMsg.innerText = "错误: 必须使用 HTTPS 协议才能调用摄像头！";
-            statusMsg.style.color = "red";
-        } else {
-            statusMsg.innerText = "请允许浏览器访问摄像头";
+        async function stopCamera() {
+            try {
+                await html5QrCode.stop();
+                statusMsg.innerText = "摄像头已关闭";
+                startBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+                stopBtn.style.display = 'none';
+            } catch (err) {
+                console.error("Stop error:", err);
+            }
         }
 
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+
+        // 初始安全检查
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            statusMsg.innerText = "⚠️ 注意：非 HTTPS 环境无法调用摄像头！";
+            statusMsg.style.color = "orange";
+        }
     </script>
 </body>
 </html>
