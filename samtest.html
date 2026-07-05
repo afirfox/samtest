@@ -186,32 +186,75 @@
             color: white;
         }
 
-        .wheel-wrapper { position: relative; width: 320px; height: 320px; user-select: none; }
+        .wheel-wrapper { 
+            position: relative; width: 340px; height: 340px; user-select: none;
+        }
+        
+        /* 转盘外圈灯泡装饰 */
+        .wheel-bulbs {
+            position: absolute; inset: -15px; border-radius: 50%;
+            z-index: 5; pointer-events: none;
+        }
+        .bulb {
+            position: absolute; width: 12px; height: 12px; border-radius: 50%;
+            top: 50%; left: 50%; transform-origin: 0 0;
+            box-shadow: 0 0 6px currentColor;
+        }
+        .bulb.on { opacity: 1; }
+        .bulb.off { opacity: 0.3; }
+
         .pointer {
-            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
-            width: 40px; height: 40px; z-index: 10;
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            width: 40px; height: 40px; z-index: 20; pointer-events: none;
+            animation: pointerPulse 1s ease-in-out infinite;
+        }
+        @keyframes pointerPulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
         }
         .pointer::after {
             content: ''; display: block; width: 0; height: 0;
-            border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 30px solid #FFD700;
+            border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 35px solid #FFD700;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         }
-        #wheel {
-            width: 100%; height: 100%; border-radius: 50%; position: relative;
-            overflow: hidden; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1);
-            border: 8px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        
+        .wheel-container {
+            position: relative; width: 100%; height: 100%;
+            border-radius: 50%; overflow: hidden;
+            border: 8px solid #fff; box-shadow: 0 0 30px rgba(0,0,0,0.3);
         }
+        #wheelCanvas {
+            width: 100%; height: 100%; border-radius: 50%;
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+        
         .wheel-center {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 40px; height: 40px; background: white; border-radius: 50%; z-index: 5;
-            display: flex; align-items: center; justify-content: center; font-weight: bold; color: #764ba2; border: 3px solid #FFD700;
+            width: 56px; height: 56px; background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 50%; z-index: 25;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; 
+            border: 4px solid #fff; box-shadow: 0 2px 15px rgba(0,0,0,0.3);
+            font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
+
+        #spin-btn {
+            padding:15px 50px; font-size:22px; background: linear-gradient(135deg, #FFD700, #FFA500); 
+            border: none; border-radius:50px; cursor:pointer; color:#fff; font-weight:bold;
+            box-shadow: 0 6px 20px rgba(255,165,0,0.4); transition: all 0.3s;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        #spin-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,165,0,0.5); }
+        #spin-btn:disabled { background: #999; box-shadow: none; cursor: not-allowed; transform: none; }
 
         #result-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            background: white; padding: 30px 60px; border-radius: 20px; text-align: center;
-            z-index: 10001; box-shadow: 0 10px 40px rgba(0,0,0,0.5); transition: transform 0.3s; color: #333;
+            background: linear-gradient(135deg, #fff 0%, #fdfbfb 100%); padding: 40px 60px; border-radius: 30px; text-align: center;
+            z-index: 10001; box-shadow: 0 20px 60px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); color: #333;
+            border: 6px solid #FFD700;
         }
         #result-modal.show { transform: translate(-50%, -50%) scale(1); }
+        #confetti-canvas {
+            position: fixed; inset: 0; pointer-events: none; z-index: 10000;
+        }
 
         .toast {
             position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
@@ -284,14 +327,20 @@
 
     <!-- 游戏视图 (新增功能) -->
     <div id="game-view">
-        <h1 style="color:white; text-align:center;">🎡 幸运大转盘 🎡</h1>
+        <h1 style="color:white; text-align:center; margin:0 0 10px;">🎡 幸运大转盘 🎡</h1>
+        <p style="color:rgba(255,255,255,0.7); margin:0 0 20px;">点击按钮，试试你的运气！</p>
         <div class="wheel-wrapper">
             <div class="pointer"></div>
-            <div id="wheel"></div>
+            <div class="wheel-bulbs" id="wheel-bulbs"></div>
+            <div class="wheel-container">
+                <canvas id="wheelCanvas" width="680" height="680"></canvas>
+            </div>
             <div class="wheel-center">GO</div>
         </div>
-        <button id="spin-btn" style="padding:15px 40px; font-size:20px; background:#FFD700; border:none; border-radius:50px; cursor:pointer; color:#333; font-weight:bold;">立即抽奖</button>
+        <button id="spin-btn">🎰 立即抽奖</button>
     </div>
+
+    <canvas id="confetti-canvas"></canvas>
 
     <!-- 通用模态框 -->
     <div class="modal-overlay" id="settings-modal">
@@ -347,8 +396,9 @@
         const uploadImageBtn = document.getElementById('upload-image-btn');
 
         // DOM Elements - Game
-        const wheel = document.getElementById('wheel');
-        const spinBtn = document.getElementById('spin-btn');
+        const wheelCanvas = document.getElementById('wheelCanvas');
+        const wheelContainer = document.querySelector('.wheel-container');
+        const spinBtnEl = document.getElementById('spin-btn');
         const resultModal = document.getElementById('result-modal');
         const prizeText = document.getElementById('prize-text');
 
@@ -573,29 +623,46 @@
 
         let gameRotation = 0;
         function initWheel() {
-            const gradientParts = prizes.map((p, i) => {
-                const start = (360 / prizes.length) * i;
-                const end = (360 / prizes.length) * (i + 1);
-                return `${p.color} ${start}deg ${end}deg`;
-            }).join(', ');
-            wheel.style.background = `conic-gradient(${gradientParts})`;
+            const ctx = wheelCanvas.getContext('2d');
+            const size = wheelCanvas.width;
+            const center = size / 2;
+            const radius = size / 2 - 10;
+            const sliceAngle = (2 * Math.PI) / prizes.length;
+
+            ctx.clearRect(0, 0, size, size);
 
             prizes.forEach((prize, i) => {
-                const angle = (360 / prizes.length) * i + (360 / prizes.length / 2);
-                const label = document.createElement('div');
-                label.textContent = prize.text;
-                label.style.cssText = `position:absolute; left:50%; top:50%; width:140px; height:30px; 
-                    transform:translate(-50%, -50%) rotate(${angle}deg) translateY(-120px);
-                    text-align:center; font-weight:bold; font-size:14px; color:#333;`;
-                wheel.appendChild(label);
+                const startAngle = i * sliceAngle - Math.PI / 2;
+                const endAngle = startAngle + sliceAngle;
+
+                // Draw wedge
+                ctx.beginPath();
+                ctx.moveTo(center, center);
+                ctx.arc(center, center, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = prize.color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw text
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(startAngle + sliceAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 22px -apple-system, sans-serif';
+                ctx.fillText(prize.text, radius - 30, 8);
+                ctx.restore();
             });
         }
 
         function spinWheel() {
-            spinBtn.disabled = true;
+            spinBtnEl.disabled = true;
             const extraRotation = Math.floor(Math.random() * 360);
             gameRotation += (360 * 5) + extraRotation;
-            wheel.style.transform = `rotate(${gameRotation}deg)`;
+            wheelCanvas.style.transform = `rotate(${gameRotation}deg)`;
 
             setTimeout(() => {
                 const actualAngle = gameRotation % 360;
@@ -603,7 +670,7 @@
                 const prizeIndex = Math.floor(((360 - (actualAngle % 360)) % 360) / sliceAngle);
                 prizeText.textContent = prizes[prizeIndex].text;
                 resultModal.classList.add('show');
-                spinBtn.disabled = false;
+                spinBtnEl.disabled = false;
             }, 4000);
         }
 
@@ -644,7 +711,7 @@
             showToast('设置已保存');
         };
 
-        spinBtn.onclick = spinWheel;
+        spinBtnEl.onclick = spinWheel;
 
         initWheel();
         renderHistory();
